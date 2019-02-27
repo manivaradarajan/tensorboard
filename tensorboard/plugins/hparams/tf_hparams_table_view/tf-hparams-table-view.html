@@ -87,7 +87,7 @@ session group.
       </template>
       <template class="row-details">
         <tf-hparams-session-group-details
-          api-url="[[apiUrl]]"
+          backend="[[backend]]"
           experiment-name="[[experimentName]]"
           session-group="[[item]]"
           schema="[[schema]]"
@@ -133,9 +133,10 @@ session group.
         // a row to see its details.
         enableShowMetrics: Boolean,
 
-        // The url for the backend. Used only when a row is expanded to get
-        // the metric values. Can be omitted if enableShowMetrics is false.
-        apiUrl: String,
+        // An object for making HParams API requests to the backend.
+        // This is used only when a row is expanded to call the backend to
+        // get metric values. It can be omitted if enableShowMetrics is false.
+        backend: Object,
 
         // The experiment name to use when calling the backend to get
         // the metric values. Can be omitted if enableShowMetrics is false.
@@ -146,7 +147,21 @@ session group.
       ],
 
       _schemaOrSessionGroupsChanged() {
+        // Vaadin-grid removes 'row-details' if the schema changes
+        // and doesn't update 'expandedItems'. So we first close the
+        // expanded items, call Polymer.dom.flush() to update the grid,
+        // and then re-open the groups that were open before.
+        const expandedItems = this.$.sessionGroupsTable.get("expandedItems");
         this.$.sessionGroupsTable.set("expandedItems", []);
+        Polymer.dom.flush();
+        // Index sessionGroups by name.
+        const sessionGroupsByName = new Map();
+        this.sessionGroups.forEach(sg=>{sessionGroupsByName.set(sg.name, sg);});
+        this.$.sessionGroupsTable.set(
+            "expandedItems",
+            expandedItems
+              .map(sg => sessionGroupsByName.get(sg.name))
+              .filter(Boolean));
       },
 
       _hparamName: tf.hparams.utils.hparamName,
